@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>JumpDoodle 🐸 IT Edition</title>
+<style>
+    :root {
+        --bg: #0a0a14;
+        --panel: #1f1f2e;
+        --accent: #4ade80;
+        --text: #f3f4f6;
+        --gold: #fbbf24;
+        --danger: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        padding: 0;
+        background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a14 100%);
+        color: var(--text);
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        overflow: hidden;
+        touch-action: none;
+    }
+    #game-container {
+        position: relative;
+        width: 100%;
+        max-width: 450px;
+        height: 100vh;
+        max-height: 800px;
+        background: linear-gradient(180deg, #0f0f1e 0%, #1a0f2e 100%);
+        box-shadow: 0 0 40px rgba(74, 222, 128, 0.15);
+        overflow: hidden;
+        border-radius: 12px;
+    }
+    canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+    .screen {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(10, 10, 20, 0.95);
+        backdrop-filter: blur(10px);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 20px;
+        z-index: 10;
+        overflow-y: auto;
+    }
+    .hidden { display: none !important; }
+
+    h1 {
+        font-size: 2.5rem;
+        margin: 0 0 10px;
+        background: linear-gradient(135deg, #4ade80, #60a5fa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        filter: drop-shadow(0 0 10px rgba(74,222,128,0.5));
+    }
+    h2 { font-size: 1.8rem; margin: 0 0 15px; color: var(--gold); }
+    p { font-size: 1rem; margin: 5px 0; color: #9ca3af; }
+
+    .hud {
+        position: absolute;
+        top: 15px; left: 15px; right: 15px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 1.2rem;
+        font-weight: bold;
+        z-index: 5;
+        pointer-events: none;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    }
+    .hud-level {
+        position: absolute;
+        top: 45px; left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.9rem;
+        color: var(--gold);
+        z-index: 5;
+        pointer-events: none;
+        background: rgba(0,0,0,0.6);
+        padding: 6px 15px;
+        border-radius: 12px;
+        text-align: center;
+        min-width: 180px;
+        border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+    .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 3px;
+        margin-top: 5px;
+        overflow: hidden;
+    }
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #4ade80, #fbbf24);
+        transition: width 0.3s;
+        box-shadow: 0 0 10px rgba(251, 191, 36, 0.6);
+    }
+
+    button {
+        background: linear-gradient(135deg, #4ade80, #22c55e);
+        color: #000;
+        border: none;
+        padding: 12px 28px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        border-radius: 10px;
+        margin: 8px;
+        cursor: pointer;
+        transition: transform 0.15s, box-shadow 0.2s;
+        box-shadow: 0 4px 0 #16a34a, 0 0 20px rgba(74,222,128,0.3);
+    }
+    button:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #16a34a, 0 0 30px rgba(74,222,128,0.5); }
+    button:active { transform: translateY(4px); box-shadow: 0 0 0 #16a34a; }
+    button.secondary {
+        background: linear-gradient(135deg, #4b5563, #374151);
+        color: white;
+        box-shadow: 0 4px 0 #1f2937;
+    }
+    button.secondary:hover { box-shadow: 0 6px 0 #1f2937, 0 0 20px rgba(75,85,99,0.4); }
+
+    .fact-box {
+        background: linear-gradient(135deg, rgba(31, 31, 46, 0.9), rgba(20, 20, 30, 0.9));
+        border: 2px solid var(--gold);
+        border-radius: 16px;
+        padding: 20px;
+        margin: 20px 0;
+        width: 90%;
+        max-width: 360px;
+        box-shadow: 0 0 30px rgba(251, 191, 36, 0.25);
+    }
+    .fact-box p { color: var(--gold); margin-bottom: 10px; font-weight: bold; }
+    .fact-box h3 { color: var(--text); font-size: 1.05rem; line-height: 1.5; margin: 0; font-weight: normal; }
+
+    .skins-grid, .levels-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin: 15px 0;
+        width: 90%;
+        max-width: 360px;
+        max-height: 55vh;
+        overflow-y: auto;
+        padding: 10px;
+    }
+    .levels-grid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+    }
+    .skin-item {
+        background: linear-gradient(135deg, var(--panel), #15151f);
+        padding: 15px;
+        border-radius: 12px;
+        font-size: 2rem;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: 0.25s;
+    }
+    .skin-item.active {
+        border-color: var(--accent);
+        box-shadow: 0 0 20px rgba(74,222,128,0.5);
+        transform: scale(1.05);
+    }
+
+    .level-btn {
+        background: linear-gradient(135deg, var(--panel), #15151f);
+        border: 2px solid transparent;
+        border-radius: 10px;
+        padding: 10px 0;
+        color: var(--text);
+        font-weight: bold;
+        cursor: pointer;
+        transition: 0.2s;
+        font-size: 1rem;
+        position: relative;
+    }
+    .level-btn.unlocked {
+        background: linear-gradient(135deg, #1f3a2e, #152a20);
+        border-color: rgba(74, 222, 128, 0.3);
+    }
+    .level-btn.unlocked:hover {
+        transform: scale(1.08);
+        border-color: var(--accent);
+        box-shadow: 0 0 15px rgba(74,222,128,0.4);
+    }
+    .level-btn.locked {
+        background: #1a1a1a;
+        color: #555;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    .level-btn.boss {
+        background: linear-gradient(135deg, #450a0a, #7f1d1d);
+        border-color: #ef4444;
+        color: #fff;
+        animation: bossPulse 2s ease-in-out infinite;
+    }
+    @keyframes bossPulse {
+        0%, 100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+        50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.8); }
+    }
+    .level-btn.completed::after {
+        content: '✓';
+        position: absolute;
+        top: -5px; right: -5px;
+        background: var(--accent);
+        color: #000;
+        border-radius: 50%;
+        width: 16px; height: 16px;
+        font-size: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .collection-list {
+        width: 90%;
+        max-width: 380px;
+        max-height: 60vh;
+        overflow-y: auto;
+        margin: 15px 0;
+        text-align: left;
+    }
+    .collection-item {
+        background: linear-gradient(135deg, rgba(31, 31, 46, 0.8), rgba(20, 20, 30, 0.8));
+        border-left: 3px solid var(--gold);
+        padding: 10px 15px;
+        margin: 8px 0;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+    .collection-item.locked {
+        border-left-color: #555;
+        opacity: 0.5;
+        font-style: italic;
+    }
+
+    .stats-row {
+        display: flex;
+        justify-content: space-around;
+        width: 90%;
+        max-width: 360px;
+        margin: 15px 0;
+        padding: 10px;
+        background: rgba(31, 31, 46, 0.6);
+        border-radius: 10px;
+    }
+    .stat {
+        text-align: center;
+    }
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--gold);
+    }
+    .stat-label {
+        font-size: 0.75rem;
+        color: #9ca3af;
+    }
+
+    .legend {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 15px;
+        font-size: 0.8rem;
+        flex-wrap: wrap;
+    }
+    .legend span {
+        background: rgba(31, 31, 46, 0.8);
+        padding: 6px 12px;
+        border-radius: 8px;
+    }
+
+    .boss-hud {
+        position: absolute;
+        top: 80px; left: 50%;
+        transform: translateX(-50%);
+        width: 80%;
+        max-width: 300px;
+        z-index: 5;
+        pointer-events: none;
+        text-align: center;
+    }
+    .boss-name {
+        color: #ef4444;
+        font-size: 1.2rem;
+        font-weight: bold;
+        text-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+        margin-bottom: 5px;
+    }
+    .boss-hp-bar {
+        width: 100%;
+        height: 12px;
+        background: rgba(0,0,0,0.6);
+        border-radius: 6px;
+        overflow: hidden;
+        border: 1px solid rgba(239, 68, 68, 0.5);
+    }
+    .boss-hp-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ef4444, #dc2626);
+        transition: width 0.3s;
+    }
+
+    .victory-title {
+        font-size: 2.2rem;
+        background: linear-gradient(135deg, #fbbf24, #f59e0b, #ef4444);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.6));
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+
+    .scroll-hint {
+        font-size: 0.75rem;
+        color: #666;
+        margin-top: 5px;
+    }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="hud hidden" id="hud">
+        <span>Счёт: <span id="score">0</span></span>
+        <span>💰 <span id="coins">0</span></span>
+    </div>
+    <div class="hud-level hidden" id="hud-level">
+        <div>Уровень <span id="level-num">1</span> / 90</div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <div class="boss-hud hidden" id="boss-hud">
+        <div class="boss-name">💀 ЛЕНИ МИЛАН 💀</div>
+        <div class="boss-hp-bar">
+            <div class="boss-hp-fill" id="boss-hp-fill" style="width: 100%"></div>
+        </div>
+    </div>
+
+    <!-- Главное меню -->
+    <div class="screen" id="menu-screen">
+        <h1>🐸 JumpDoodle</h1>
+        <p>Прыгай как можно выше и учи IT!</p>
+
+        <div class="stats-row">
+            <div class="stat">
+                <div class="stat-value" id="menu-record">0</div>
+                <div class="stat-label">🏆 Рекорд</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="menu-coins">0</div>
+                <div class="stat-label">💰 Монеты</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="menu-max-level">1</div>
+                <div class="stat-label">📊 Макс. ур.</div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <span>🟩 Обычная</span>
+            <span>🟦 Движущаяся</span>
+            <span>🟥 Хрупкая (2×</span>
+            <span>🟨 Батут</span>
+        </div>
+
+        <button id="play-btn">▶ Играть (с 1 уровня)</button>
+        <button id="levels-btn">🗺️ Выбрать уровень</button>
+        <button class="secondary" id="collection-btn">📚 Коллекция знаний</button>
+        <button class="secondary" id="skins-btn">🎨 Скины</button>
+
+        <p style="margin-top:15px; font-size: 0.8rem;">← → или A / D. На телефоне — касание половины экрана.</p>
+        <p style="font-size: 0.8rem; color: #ef4444;">⚠️ На 90 уровне тебя ждёт БОСС — Лени Милан!</p>
+    </div>
+
+    <!-- Выбор уровня -->
+    <div class="screen hidden" id="level-select-screen">
+        <h2>🗺️ Выбери уровень</h2>
+        <p>Открыто уровней: <span id="unlocked-count" style="color: var(--accent)">1</span> / 90</p>
+        <div class="levels-grid" id="levels-grid"></div>
+        <p class="scroll-hint">↕ Прокрути для просмотра всех уровней</p>
+        <button class="secondary" id="level-back-btn">← Назад</button>
+    </div>
+
+    <!-- Коллекция знаний -->
+    <div class="screen hidden" id="collection-screen">
+        <h2>📚 Коллекция знаний</h2>
+        <p>Собрано: <span id="facts-count" style="color: var(--gold)">0</span> / 90</p>
+        <div class="collection-list" id="collection-list"></div>
+        <button class="secondary" id="collection-back-btn">← Назад</button>
+    </div>
+
+    <!-- Экран завершения уровня -->
+    <div class="screen hidden" id="level-up-screen">
+        <h2>🎉 Уровень <span id="new-level">1</span> пройден!</h2>
+        <div class="fact-box">
+            <p>💡 Новое знание для IT:</p>
+            <h3 id="fact-text"></h3>
+        </div>
+        <button id="continue-btn">▶ Продолжить</button>
+    </div>
+
+    <!-- Экран победы над боссом -->
+    <div class="screen hidden" id="victory-screen">
+        <h1 class="victory-title">🏆 ПОБЕДА! 🏆</h1>
+        <p>Ты победил Лени Милана!</p>
+        <div class="fact-box">
+            <p>🎓 Финальное знание для IT:</p>
+            <h3 id="final-fact-text"></h3>
+        </div>
+        <p>Итоговый счёт: <span style="color: var(--gold)" id="victory-score">0</span></p>
+        <button id="victory-menu-btn">🏠 В меню</button>
+    </div>
+
+    <!-- Экран смерти -->
+    <div class="screen hidden" id="game-over-screen">
+        <h1>💀 Упал!</h1>
+        <p>Твой счёт:</p>
+        <h2 id="final-score">0</h2>
+        <p>Монетки: <span style="color: var(--gold)">+<span id="earned-coins">0</span></span></p>
+        <p>Рекорд: <span id="record">0</span></p>
+        <p>Достигнут уровень: <span id="final-level">1</span> / 90</p>
+        <button id="restart-btn">🔄 Ещё раз</button>
+        <button class="secondary" id="menu-btn">🏠 В меню</button>
+    </div>
+
+    <!-- Магазин скинов -->
+    <div class="screen hidden" id="skins-screen">
+        <h2>🎨 Магазин скинов</h2>
+        <p>💰 Твои монеты: <span id="shop-coins" style="color: var(--gold)">0</span></p>
+        <div class="skins-grid" id="skins-grid"></div>
+        <button class="secondary" id="back-btn">← Назад</button>
+    </div>
+</div>
+
+<script>
+// ==========================================
+// 90 ПОЛЕЗНЫХ ФАКТОВ И ФОРМУЛ ДЛЯ IT
+// ==========================================
+const itFacts = [
+    "1. 🧮 Бинарный поиск: Сложность O(log n). Делим отсортированный массив пополам на каждом шаге.",
+    "2. 🫧 Сортировка пузырьком: Сложность O(n²). Простая, но неэффективная для больших данных.",
+    "3. ⚡ Быстрая сортировка (QuickSort): O(n log n) в среднем. Использует метод «разделяй и властвуй».",
+    "4. 🐇 Числа Фибоначчи: F(n) = F(n-1) + F(n-2). База для динамического программирования.",
+    "5. 🔄 Факториал: n! = n × (n-1)!. Часто используется в комбинаторике и рекурсии.",
+    "6. 🧠 Закон Де Моргана: ¬(A ∧ B) = ¬A ∨ ¬B. Основа упрощения логических выражений.",
+    "7. 🔢 Перевод в двоичный код: Делим число на 2 и записываем остатки в обратном порядке.",
+    "8. 💾 1 Кбайт = 2^10 байт = 1024 байт. Компьютер мыслит степенями двойки.",
+    "9. 💿 1 Мбайт = 2^20 байт. 1 Гбайт = 2^30 байт.",
+    "10. 📊 Формула Шеннона (Энтропия): H = -Σ p_i log2(p_i). Мера неопределенности информации.",
+    "11. 🏛️ Теорема CAP: В распределенной системе невозможно одновременно обеспечить Consistency, Availability и Partition tolerance.",
+    "12. 📈 Закон Мура: Количество транзисторов на микросхеме удваивается каждые 2 года.",
+    "13. ⏱️ Big O: O(1) — константное время (мгновенно, например, доступ к массиву по индексу).",
+    "14. 📏 Big O: O(n) — линейное время (перебор массива).",
+    "15. 🧱 Big O: O(n²) — квадратичное время (вложенные циклы).",
+    "16. 🔐 Хеш-функция: h(x) → строка фиксированной длины. Необратима и уникальна.",
+    "17. 💥 Коллизия хешей: Ситуация, когда h(x1) = h(x2) при x1 ≠ x2.",
+    "18. 🌐 REST API: GET — получить данные, POST — создать новый ресурс.",
+    "19. 🛠️ REST API: PUT — полностью обновить, PATCH — частично, DELETE — удалить.",
+    "20. 🚦 HTTP коды: 200 (OK), 400 (Bad Request), 404 (Not Found), 500 (Server Error).",
+    "21. 🤝 TCP: Гарантирует доставку (3-way handshake: SYN, SYN-ACK, ACK).",
+    "22. 🚀 UDP: Быстрая доставка без гарантий. Идеально для онлайн-игр и стриминга.",
+    "23. 📖 DNS: Телефонная книга интернета. Преобразует домены (google.com) в IP-адреса.",
+    "24. 🌍 IPv4: 32 бита (например, 192.168.1.1). Адресов всего ~4.3 млрд.",
+    "25. 🎭 Маска подсети: Определяет, какая часть IP — это сеть, а какая — хост.",
+    "26. 🏗️ Модель OSI: 7 уровней (Физический, Канальный, Сетевой, Транспортный...)",
+    "27. 🗄️ SQL: SELECT * FROM users WHERE id = 1; — базовый запрос на выборку.",
+    "28. 🔗 SQL JOIN: INNER JOIN возвращает только строки, имеющие совпадения в обеих таблицах.",
+    "29. 🏦 ACID в БД: Atomicity, Consistency, Isolation, Durability. Гарант надежности транзакций.",
+    "30. 📑 Индекс в БД: Ускоряет поиск (работает как алфавитный указатель в книге).",
+    "31. 🌿 Git: git commit -m 'msg' — сохранить снимок изменений локально.",
+    "32. 📤 Git: git push — отправить свои коммиты в удаленный репозиторий.",
+    "33. 📥 Git: git pull — получить изменения с сервера и сразу их слить (merge).",
+    "34. 🔀 Git: git rebase — переносит коммиты на новую базу (делает историю линейной).",
+    "35. 📦 Docker: Контейнеризация. Приложение упаковано вместе со средой и зависимостями.",
+    "36. 🔄 CI/CD: Непрерывная интеграция и доставка. Автоматизация тестов и деплоя.",
+    "37. 🐧 Linux: chmod 777 — дает полный доступ всем. В продакшене так делать НЕЛЬЗЯ!",
+    "38. 🔍 Linux: grep 'text' file — мощный поиск текста или паттернов в файлах.",
+    "39. 👑 Linux: sudo — выполнить команду от имени суперпользователя (root).",
+    "40. 🗝️ SSH: ssh user@host — безопасное удаленное подключение по шифрованному каналу.",
+    "41. ⏰ Cron: * * * * * command — планировщик задач в Unix-системах.",
+    "42. 🧬 Regex: ^ — начало строки, $ — конец строки. Основа парсинга текста.",
+    "43. 🎯 Regex: .* — любой символ (0 или более раз). Жадный квантификатор.",
+    "44. 🏛️ SOLID (S): Single Responsibility. Класс должен иметь только одну причину для изменения.",
+    "45. 🏛️ SOLID (O): Open/Closed. Открыт для расширения, но закрыт для изменения.",
+    "46. 🚫 DRY: Don't Repeat Yourself. Избегай дублирования кода и логики.",
+    "47. 💡 KISS: Keep It Simple, Stupid. Простое решение обычно самое лучшее.",
+    "48. 🛑 YAGNI: You Aren't Gonna Need It. Не пиши функционал 'про запас'.",
+    "49. 📦 ООП: Инкапсуляция — скрытие внутренней реализации и защита данных.",
+    "50. 🧬 ООП: Наследование — создание новых классов на основе существующих.",
+    "51. 🎭 ООП: Полиморфизм — ability объектов с разной реализацией отвечать на один вызов.",
+    "52. 🌫️ ООП: Абстракция — выделение главных характеристик объекта, отбрасывая лишнее.",
+    "53. 📚 Стек (Stack): LIFO (Last In, First Out). Последний пришел — первый вышел.",
+    "54. 🚶 Очередь (Queue): FIFO (First In, First Out). Первый пришел — первый вышел.",
+    "55. 🕸️ Графы: Состоят из вершин и рёбер. Основа карт, соцсетей и нейросетей.",
+    "56. 🌳 Деревья: Иерархическая структура. Примеры: DOM, файловая система, JSON.",
+    "57. 🔎 Двоичное дерево поиска: Левый потомок < Родитель < Правый потомок.",
+    "58. 🔁 Рекурсия: Функция, вызывающая сама себя. Всегда нужен базовый случай (выход)!",
+    "59. 💾 Динамическое программирование: Разбиение задачи на подзадачи + кэширование результатов.",
+    "60. 🤑 Жадные алгоритмы: Локально оптимальный выбор на каждом шаге (не всегда глобально верны).",
+    "61. 📝 JSON: Текстовый формат обмена данными. Структура: { 'ключ': 'значение' }.",
+    "62. 🏷️ XML: Разметка данных с помощью тегов. Строже JSON, но многословнее.",
+    "63. 🔌 WebSockets: Двусторонняя связь между клиентом и сервером в реальном времени.",
+    "64. 🛡️ CORS: Cross-Origin Resource Sharing. Механизм безопасности браузера для API.",
+    "65. 🎟️ JWT (JSON Web Token): Компактный способ безопасной передачи данных (состояние не хранится).",
+    "66. 🔑 OAuth 2.0: Протокол авторизации (например, 'Войти через Google').",
+    "67. 🧂 Хеширование паролей: Никогда не храни пароли в открытом виде! Используй соль (salt).",
+    "68. 💉 SQL-инъекция: Уязвимость через внедрение вредоносного SQL-кода в поля ввода.",
+    "69. 🕷️ XSS (Cross-Site Scripting): Внедрение вредоносного JavaScript на страницы сайта.",
+    "70. 🎭 CSRF: Подделка межсайтовых запросов. Заставляет браузер жертвы выполнить действие.",
+    "71. 🔒 HTTPS: HTTP + SSL/TLS. Шифрует трафик между браузером и сервером.",
+    "72. 🔐 Симметричное шифрование: Один и тот же ключ для шифрования и расшифровки.",
+    "73. 🗝️ Асимметричное шифрование: Пара ключей (публичный для шифрования, приватный для расшифровки).",
+    "74. ⛓️ Blockchain: Цепочка блоков, связанных хешами. Обеспечивает неизменяемость данных.",
+    "75. ⛏️ Майнинг: Решение криптографических задач для подтверждения транзакций в сети.",
+    "76. 🔤 ASCII: 7-битная кодировка символов (всего 128 символов, латиница).",
+    "77. 🌍 Unicode: Универсальная кодировка, включающая все языки мира и эмодзи 🐸.",
+    "78. 📦 UTF-8: Переменная кодировка Unicode (от 1 до 4 байт на символ). Стандарт в вебе.",
+    "79. 🧠 Память: Stack (быстрая, для локальных переменных) vs Heap (для динамических объектов).",
+    "80. 🕳️ Утечка памяти: Когда программа забывает освобождать занятую память, что ведет к краху.",
+    "81. 🏎️ Многопоточность: Параллельное выполнение задач. Остерегайся состояния гонки (Race Condition)!",
+    "82. 🔒 Мьютекс (Mutex): 'Замок' для защиты общих ресурсов от одновременного доступа потоков.",
+    "83. 🚦 Семафор: Счетчик для ограничения количества потоков, имеющих доступ к ресурсу.",
+    "84. 🍃 NoSQL БД: (MongoDB, Redis). Гибкая схема, отлично масштабируются горизонтально.",
+    "85. 📐 Нормализация БД: Процесс устранения избыточности данных (1NF, 2NF, 3NF).",
+    "86. 💼 Транзакция: Набор операций, выполняемых как единое целое (принцип 'всё или ничего').",
+    "87. 🚀 Кэширование: Хранение частозапрашиваемых данных в быстрой памяти для ускорения.",
+    "88. ⚖️ Балансировщик нагрузки: Распределяет входящий трафик между несколькими серверами.",
+    "89. 🧩 Микросервисы: Архитектура, где приложение состоит из небольших независимых сервисов.",
+    "90. 🐛 'У меня на машине работает!' — классическая фраза программиста перед настройкой Docker."
+];
+
+// ==========================================
+// СИСТЕМА СОХРАНЕНИЙ
+// ==========================================
+const SaveSystem = {
+    keys: {
+        coins: 'jd_coins',
+        record: 'jd_record',
+        skin: 'jd_skin',
+        maxLevel: 'jd_max_level',
+        factsSeen: 'jd_facts_seen',
+        completedLevels: 'jd_completed_levels'
+    },
+
+    load() {
+        return {
+            coins: parseInt(localStorage.getItem(this.keys.coins) || '0'),
+            record: parseInt(localStorage.getItem(this.keys.record) || '0'),
+            skin: localStorage.getItem(this.keys.skin) || '🐸',
+            maxLevel: parseInt(localStorage.getItem(this.keys.maxLevel) || '1'),
+            factsSeen: JSON.parse(localStorage.getItem(this.keys.factsSeen) || '[]'),
+            completedLevels: JSON.parse(localStorage.getItem(this.keys.completedLevels) || '[]')
+        };
+    },
+
+    save(data) {
+        localStorage.setItem(this.keys.coins, data.coins);
+        localStorage.setItem(this.keys.record, data.record);
+        localStorage.setItem(this.keys.skin, data.skin);
+        localStorage.setItem(this.keys.maxLevel, data.maxLevel);
+        localStorage.setItem(this.keys.factsSeen, JSON.stringify(data.factsSeen));
+        localStorage.setItem(this.keys.completedLevels, JSON.stringify(data.completedLevels));
+    },
+
+    updateMaxLevel(level) {
+        const data = this.load();
+        if (level > data.maxLevel) {
+            data.maxLevel = level;
+            this.save(data);
+        }
+    },
+
+    addFact(factIndex) {
+        const data = this.load();
+        if (!data.factsSeen.includes(factIndex)) {
+            data.factsSeen.push(factIndex);
+            this.save(data);
+        }
+    },
+
+    completeLevel(level) {
+        const data = this.load();
+        if (!data.completedLevels.includes(level)) {
+            data.completedLevels.push(level);
+            this.save(data);
+        }
+    },
+
+    reset() {
+        Object.values(this.keys).forEach(k => localStorage.removeItem(k));
+    }
+};
+
+// ==========================================
+// ИГРОВАЯ ЛОГИКА
+// ==========================================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const container = document.getElementById('game-container');
+
+let W, H;
+function resize() {
+    W = container.clientWidth;
+    H = container.clientHeight;
+    canvas.width = W;
+    canvas.height = H;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Загрузка сохранений
+let saveData = SaveSystem.load();
+let totalCoins = saveData.coins;
+let record = saveData.record;
+let currentSkin = saveData.skin;
+let maxUnlockedLevel = saveData.maxLevel;
+
+// Состояние игры
+let score = 0;
+let coinsCount = 0;
+let currentLevel = 1;
+let nextLevelScore = 1000;
+let prevLevelScore = 0;
+let startLevel = 1; // С какого уровня начали
+let isPaused = false;
+let isGameOver = false;
+let bossMode = false;
+let bossDefeated = false;
+
+const skins = ['🐸', '🐲', '🦊', '🐵', '🐱', '🐼', '🦄', '🤖', '👽'];
+
+const player = {
+    x: W / 2 - 20,
+    y: H - 100,
+    width: 40,
+    height: 40,
+    vx: 0,
+    vy: 0,
+    gravity: 0.5,
+    jumpForce: -13,
+    trail: []
+};
+
+let platforms = [];
+let coins = [];
+let particles = [];
+let stars = [];
+
+const boss = {
+    x: 0, y: 0,
+    width: 80, height: 80,
+    vx: 3,
+    hp: 5,
+    maxHp: 5,
+    emoji: '😈',
+    hitFlash: 0,
+    shakeX: 0
+};
+
+const keys = { left: false, right: false };
+
+function initStars() {
+    stars = [];
+    for (let i = 0; i < 50; i++) {
+        stars.push({
+            x: Math.random() * W,
+            y: Math.random() * H,
+            size: Math.random() * 2 + 0.5,
+            alpha: Math.random() * 0.5 + 0.2,
+            twinkle: Math.random() * 0.02
+        });
+    }
+}
+
+function createPlatform(x, y, type) {
+    return {
+        x, y,
+        width: 70, height: 15,
+        type,
+        vx: type === 'moving' ? (Math.random() > 0.5 ? 2 : -2) : 0,
+        broken: false,
+        hits: 0,
+        shake: 0
+    };
+}
+
+function initGame(level = 1) {
+    startLevel = level;
+    currentLevel = level;
+    prevLevelScore = (level - 1) * 1000;
+    score = prevLevelScore;
+    nextLevelScore = level * 1000;
+    coinsCount = 0;
+    isPaused = false;
+    isGameOver = false;
+    bossMode = false;
+    bossDefeated = false;
+
+    player.x = W / 2 - 20;
+    player.y = H - 100;
+    player.vx = 0;
+    player.vy = 0;
+    player.trail = [];
+
+    platforms = [];
+    coins = [];
+    particles = [];
+
+    initStars();
+
+    platforms.push(createPlatform(W / 2 - 35, H - 50, 'normal'));
+
+    let currentY = H - 120;
+    while (currentY > -500) {
+        let type = 'normal';
+        let rand = Math.random();
+        if (rand > 0.92) type = 'trampoline';
+        else if (rand > 0.8) type = 'moving';
+        else if (rand > 0.65) type = 'breakable';
+
+        let px = Math.random() * (W - 70);
+        platforms.push(createPlatform(px, currentY, type));
+
+        if (Math.random() > 0.7) {
+            coins.push({ x: px + 25, y: currentY - 30, collected: false, rotation: 0 });
+        }
+
+        currentY -= Math.random() * 60 + 50;
+    }
+
+    updateHUD();
+}
+
+// Управление
+window.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+});
+window.addEventListener('keyup', e => {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+});
+
+canvas.addEventListener('touchstart', handleTouch);
+canvas.addEventListener('touchmove', handleTouch);
+canvas.addEventListener('touchend', () => { keys.left = false; keys.right = false; });
+
+function handleTouch(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    keys.left = x < W / 2;
+    keys.right = x >= W / 2;
+}
+
+window.addEventListener('deviceorientation', (e) => {
+    if (e.gamma && !isPaused && !isGameOver) {
+        player.vx = e.gamma * 0.6;
+    }
+});
+
+function updateHUD() {
+    document.getElementById('score').innerText = score;
+    document.getElementById('coins').innerText = coinsCount;
+    document.getElementById('level-num').innerText = currentLevel;
+
+    let progress = 0;
+    if (nextLevelScore > prevLevelScore) {
+        progress = ((score - prevLevelScore) / (nextLevelScore - prevLevelScore)) * 100;
+        progress = Math.max(0, Math.min(100, progress));
+    }
+    document.getElementById('progress-fill').style.width = progress + '%';
+}
+
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+    if (id) document.getElementById(id).classList.remove('hidden');
+}
+
+function showLevelUp() {
+    isPaused = true;
+
+    // Сохраняем факт и прогресс
+    SaveSystem.addFact(currentLevel - 1);
+    SaveSystem.completeLevel(currentLevel);
+    SaveSystem.updateMaxLevel(currentLevel + 1);
+    saveData = SaveSystem.load();
+    maxUnlockedLevel = saveData.maxLevel;
+
+    document.getElementById('new-level').innerText = currentLevel;
+    document.getElementById('fact-text').innerText = itFacts[currentLevel - 1];
+    showScreen('level-up-screen');
+}
+
+function startBossFight() {
+    bossMode = true;
+    boss.x = W / 2 - boss.width / 2;
+    boss.y = H * 0.3;
+    boss.hp = boss.maxHp;
+    boss.vx = 3;
+    boss.hitFlash = 0;
+
+    platforms = [];
+    coins = [];
+
+    platforms.push(createPlatform(W / 2 - 100, H - 80, 'normal'));
+    platforms[0].width = 200;
+    platforms.push(createPlatform(50, H - 200, 'normal'));
+    platforms.push(createPlatform(W - 120, H - 200, 'normal'));
+    platforms.push(createPlatform(W / 2 - 35, H - 320, 'normal'));
+
+    player.x = W / 2 - 20;
+    player.y = H - 150;
+    player.vy = 0;
+
+    document.getElementById('boss-hud').classList.remove('hidden');
+    updateBossHUD();
+}
+
+function updateBossHUD() {
+    const hpPercent = (boss.hp / boss.maxHp) * 100;
+    document.getElementById('boss-hp-fill').style.width = hpPercent + '%';
+}
+
+function showVictory() {
+    isPaused = true;
+    bossDefeated = true;
+
+    // Сохраняем финальный прогресс
+    SaveSystem.addFact(89);
+    SaveSystem.completeLevel(90);
+    SaveSystem.updateMaxLevel(91);
+    saveData = SaveSystem.load();
+
+    document.getElementById('victory-score').innerText = score;
+    document.getElementById('final-fact-text').innerText = itFacts[89];
+    showScreen('victory-screen');
+}
+
+function gameOver() {
+    isGameOver = true;
+
+    // Обновляем рекорд и монеты
+    if (score > record) {
+        record = score;
+        saveData.record = record;
+    }
+    totalCoins += coinsCount;
+    saveData.coins = totalCoins;
+    SaveSystem.save(saveData);
+
+    // Обновляем максимальный уровень если прошли дальше
+    if (currentLevel > maxUnlockedLevel) {
+        SaveSystem.updateMaxLevel(currentLevel);
+        maxUnlockedLevel = currentLevel;
+    }
+
+    document.getElementById('final-score').innerText = score;
+    document.getElementById('earned-coins').innerText = coinsCount;
+    document.getElementById('record').innerText = record;
+    document.getElementById('final-level').innerText = currentLevel;
+    showScreen('game-over-screen');
+}
+
+function createParticles(x, y, color, count = 8) {
+    for(let i = 0; i < count; i++) {
+        particles.push({
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * 6,
+            vy: (Math.random() - 0.5) * 6 - 2,
+            life: 30, maxLife: 30,
+            color: color,
+            size: Math.random() * 3 + 2
+        });
+    }
+}
+
+function update() {
+    if (isPaused || isGameOver) return;
+
+    if (keys.left) player.vx = -6;
+    else if (keys.right) player.vx = 6;
+    else player.vx *= 0.85;
+
+    player.x += player.vx;
+    player.vy += player.gravity;
+    player.y += player.vy;
+
+    if (Math.abs(player.vx) > 1 || Math.abs(player.vy) > 1) {
+        player.trail.push({ x: player.x + player.width/2, y: player.y + player.height/2, life: 15 });
+        if (player.trail.length > 10) player.trail.shift();
+    }
+    player.trail.forEach(t => t.life--);
+    player.trail = player.trail.filter(t => t.life > 0);
+
+    if (player.x < -player.width) player.x = W;
+    if (player.x > W) player.x = -player.width;
+
+    if (!bossMode) {
+        let scrollThreshold = H * 0.4;
+        if (player.y < scrollThreshold) {
+            let diff = scrollThreshold - player.y;
+            player.y = scrollThreshold;
+
+            platforms.forEach(p => p.y += diff);
+            coins.forEach(c => c.y += diff);
+            particles.forEach(p => p.y += diff);
+
+            score += Math.floor(diff / 10);
+            updateHUD();
+
+            // Проверка повышения уровня
+            if (score >= nextLevelScore && currentLevel < 90) {
+                currentLevel++;
+                prevLevelScore = nextLevelScore;
+                nextLevelScore = currentLevel * 1000;
+                showLevelUp();
+                return;
+            }
+
+            // Босс на 90 уровне
+            if (score >= nextLevelScore && currentLevel === 90 && !bossMode) {
+                startBossFight();
+                return;
+            }
+        }
+    }
+
+    if (player.y > H + 50) {
+        gameOver();
+        return;
+    }
+
+    if (player.vy > 0) {
+        platforms.forEach(p => {
+            if (!p.broken &&
+                player.x + player.width > p.x &&
+                player.x < p.x + p.width &&
+                player.y + player.height > p.y &&
+                player.y + player.height < p.y + p.height + player.vy) {
+
+                if (p.type === 'breakable') {
+                    p.hits++;
+                    p.shake = 10;
+                    createParticles(player.x + player.width/2, p.y, '#f87171', 5);
+                    if (p.hits >= 2) {
+                        p.broken = true;
+                        createParticles(p.x + p.width/2, p.y + p.height/2, '#ef4444', 12);
+                    }
+                    player.vy = player.jumpForce;
+                } else {
+                    player.vy = p.type === 'trampoline' ? player.jumpForce * 1.6 : player.jumpForce;
+                    createParticles(player.x + player.width/2, p.y, '#4ade80', 4);
+                }
+            }
+        });
+    }
+
+    if (bossMode && boss.hp > 0 && player.vy > 0) {
+        if (player.x + player.width > boss.x &&
+            player.x < boss.x + boss.width &&
+            player.y + player.height > boss.y &&
+            player.y + player.height < boss.y + boss.height / 2 + player.vy) {
+
+            boss.hp--;
+            boss.hitFlash = 15;
+            player.vy = player.jumpForce * 1.3;
+            createParticles(boss.x + boss.width/2, boss.y + boss.height/2, '#ef4444', 15);
+            updateBossHUD();
+
+            if (boss.hp <= 0) {
+                createParticles(boss.x + boss.width/2, boss.y + boss.height/2, '#fbbf24', 40);
+                setTimeout(() => showVictory(), 800);
+            }
+        }
+    }
+
+    if (bossMode && boss.hp > 0) {
+        if (player.x + player.width > boss.x &&
+            player.x < boss.x + boss.width &&
+            player.y + player.height > boss.y + boss.height / 2 &&
+            player.y < boss.y + boss.height) {
+            player.vy = -8;
+            player.vx = (player.x < boss.x + boss.width/2) ? -8 : 8;
+        }
+    }
+
+    coins.forEach(c => {
+        if (!c.collected &&
+            player.x + player.width > c.x && player.x < c.x + 20 &&
+            player.y + player.height > c.y && player.y < c.y + 20) {
+            c.collected = true;
+            coinsCount++;
+            score += 50;
+            createParticles(c.x + 10, c.y + 10, '#fbbf24', 8);
+            updateHUD();
+        }
+        c.rotation = (c.rotation || 0) + 0.1;
+    });
+
+    platforms.forEach(p => {
+        if (p.type === 'moving') {
+            p.x += p.vx;
+            if (p.x < 0 || p.x + p.width > W) p.vx *= -1;
+        }
+        if (p.shake > 0) p.shake--;
+    });
+
+    if (bossMode && boss.hp > 0) {
+        boss.x += boss.vx;
+        if (boss.x < 20 || boss.x + boss.width > W - 20) boss.vx *= -1;
+        boss.y = H * 0.3 + Math.sin(Date.now() / 300) * 15;
+        if (boss.hitFlash > 0) boss.hitFlash--;
+        boss.shakeX = boss.hitFlash > 0 ? (Math.random() - 0.5) * 8 : 0;
+    }
+
+    particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.2;
+        p.life--;
+    });
+    particles = particles.filter(p => p.life > 0);
+
+    if (!bossMode) {
+        platforms = platforms.filter(p => p.y < H + 50 && !p.broken);
+        coins = coins.filter(c => c.y < H + 50 && !c.collected);
+
+        let highestY = Math.min(...platforms.map(p => p.y), H);
+        while (highestY > -200) {
+            let gap = Math.random() * 70 + 50;
+            highestY -= gap;
+
+            let type = 'normal';
+            let rand = Math.random();
+            if (rand > 0.92) type = 'trampoline';
+            else if (rand > 0.8) type = 'moving';
+            else if (rand > 0.65) type = 'breakable';
+
+            let px = Math.random() * (W - 70);
+            platforms.push(createPlatform(px, highestY, type));
+
+            if (Math.random() > 0.7) {
+                coins.push({ x: px + 25, y: highestY - 30, collected: false, rotation: 0 });
+            }
+        }
+    }
+
+    stars.forEach(s => {
+        s.alpha += s.twinkle;
+        if (s.alpha > 0.7 || s.alpha < 0.2) s.twinkle *= -1;
+    });
+}
+
+function draw() {
+    const gradient = ctx.createLinearGradient(0, 0, 0, H);
+    gradient.addColorStop(0, '#0f0f1e');
+    gradient.addColorStop(1, '#1a0f2e');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, W, H);
+
+    stars.forEach(s => {
+        ctx.fillStyle = `rgba(255, 255, 255, ${s.alpha})`;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    ctx.strokeStyle = 'rgba(74, 222, 128, 0.04)';
+    ctx.lineWidth = 1;
+    for(let i=0; i<W; i+=40) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,H); ctx.stroke(); }
+    for(let i=0; i<H; i+=40) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(W,i); ctx.stroke(); }
+
+    player.trail.forEach((t) => {
+        ctx.fillStyle = `rgba(74, 222, 128, ${t.life / 20})`;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, (t.life / 15) * 8, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    platforms.forEach(p => {
+        if (p.broken) return;
+
+        let color1, color2;
+        if (p.type === 'normal') { color1 = '#4ade80'; color2 = '#22c55e'; }
+        else if (p.type === 'moving') { color1 = '#60a5fa'; color2 = '#3b82f6'; }
+        else if (p.type === 'breakable') {
+            if (p.hits === 0) { color1 = '#f87171'; color2 = '#ef4444'; }
+            else { color1 = '#991b1b'; color2 = '#7f1d1d'; }
+        }
+        else if (p.type === 'trampoline') { color1 = '#fbbf24'; color2 = '#f59e0b'; }
+
+        const shakeOffset = p.shake > 0 ? (Math.random() - 0.5) * 4 : 0;
+
+        ctx.shadowColor = color1;
+        ctx.shadowBlur = 15;
+
+        const platGrad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + p.height);
+        platGrad.addColorStop(0, color1);
+        platGrad.addColorStop(1, color2);
+        ctx.fillStyle = platGrad;
+
+        ctx.beginPath();
+        ctx.roundRect(p.x + shakeOffset, p.y, p.width, p.height, 6);
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.fillRect(p.x + shakeOffset + 5, p.y + 2, p.width - 10, 3);
+
+        if (p.type === 'breakable' && p.hits === 1) {
+            ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(p.x + 15, p.y + 3);
+            ctx.lineTo(p.x + 30, p.y + 10);
+            ctx.lineTo(p.x + 45, p.y + 5);
+            ctx.stroke();
+        }
+    });
+
+    ctx.font = '22px Arial';
+    ctx.textAlign = 'center';
+    coins.forEach(c => {
+        if (!c.collected) {
+            ctx.save();
+            ctx.translate(c.x + 10, c.y + 10);
+            ctx.scale(Math.abs(Math.cos(c.rotation || 0)), 1);
+            ctx.fillText('💰', 0, 5);
+            ctx.restore();
+        }
+    });
+
+    particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life / p.maxLife;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    if (bossMode && boss.hp > 0) {
+        ctx.shadowColor = '#ef4444';
+        ctx.shadowBlur = 30;
+
+        const bossGrad = ctx.createRadialGradient(
+            boss.x + boss.width/2 + boss.shakeX, boss.y + boss.height/2, 10,
+            boss.x + boss.width/2 + boss.shakeX, boss.y + boss.height/2, boss.width/2
+        );
+        if (boss.hitFlash > 0) {
+            bossGrad.addColorStop(0, '#ffffff');
+            bossGrad.addColorStop(1, '#ef4444');
+        } else {
+            bossGrad.addColorStop(0, '#7f1d1d');
+            bossGrad.addColorStop(1, '#450a0a');
+        }
+        ctx.fillStyle = bossGrad;
+        ctx.beginPath();
+        ctx.arc(boss.x + boss.width/2 + boss.shakeX, boss.y + boss.height/2, boss.width/2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+
+        ctx.font = '50px Arial';
+        ctx.fillText(boss.emoji, boss.x + boss.width/2 + boss.shakeX, boss.y + boss.height/2 + 18);
+
+        ctx.font = 'bold 12px Arial';
+        ctx.fillStyle = '#ef4444';
+        ctx.fillText('ЛЕНИ МИЛАН', boss.x + boss.width/2 + boss.shakeX, boss.y - 10);
+    }
+
+    ctx.shadowColor = '#4ade80';
+    ctx.shadowBlur = 15;
+    ctx.font = '35px Arial';
+    ctx.fillText(currentSkin, player.x + player.width/2, player.y + player.height - 5);
+    ctx.shadowBlur = 0;
+}
+
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+// ==========================================
+// UI ОБРАБОТЧИКИ
+// ==========================================
+function updateMenuStats() {
+    saveData = SaveSystem.load();
+    document.getElementById('menu-record').innerText = saveData.record;
+    document.getElementById('menu-coins').innerText = saveData.coins;
+    document.getElementById('menu-max-level').innerText = saveData.maxLevel;
+}
+
+function renderLevelSelect() {
+    saveData = SaveSystem.load();
+    const maxLevel = saveData.maxLevel;
+    const completedLevels = saveData.completedLevels;
+
+    document.getElementById('unlocked-count').innerText = Math.min(maxLevel, 90);
+
+    const grid = document.getElementById('levels-grid');
+    grid.innerHTML = '';
+
+    for (let i = 1; i <= 90; i++) {
+        const btn = document.createElement('div');
+        btn.className = 'level-btn';
+
+        if (i === 90 && maxLevel >= 90) {
+            btn.classList.add('boss', 'unlocked');
+            btn.innerHTML = '💀';
+            btn.title = 'Босс: Лени Милан';
+        } else if (i <= maxLevel) {
+            btn.classList.add('unlocked');
+            btn.innerText = i;
+            if (completedLevels.includes(i)) {
+                btn.classList.add('completed');
+            }
+        } else {
+            btn.classList.add('locked');
+            btn.innerHTML = '🔒';
+        }
+
+        if (i <= maxLevel) {
+            btn.onclick = () => {
+                showScreen(null);
+                document.getElementById('hud').classList.remove('hidden');
+                document.getElementById('hud-level').classList.remove('hidden');
+                document.getElementById('boss-hud').classList.add('hidden');
+                initGame(i);
+            };
+        }
+
+        grid.appendChild(btn);
+    }
+}
+
+function renderCollection() {
+    saveData = SaveSystem.load();
+    const factsSeen = saveData.factsSeen;
+
+    document.getElementById('facts-count').innerText = factsSeen.length;
+
+    const list = document.getElementById('collection-list');
+    list.innerHTML = '';
+
+    for (let i = 0; i < 90; i++) {
+        const item = document.createElement('div');
+        item.className = 'collection-item';
+
+        if (factsSeen.includes(i)) {
+            item.innerText = itFacts[i];
+        } else {
+            item.classList.add('locked');
+            item.innerText = `🔒 Уровень ${i + 1} — ещё не открыт`;
+        }
+
+        list.appendChild(item);
+    }
+}
+
+function renderSkins() {
+    const grid = document.getElementById('skins-grid');
+    grid.innerHTML = '';
+    saveData = SaveSystem.load();
+
+    skins.forEach(s => {
+        const div = document.createElement('div');
+        div.className = 'skin-item' + (s === saveData.skin ? ' active' : '');
+        div.innerText = s;
+        div.onclick = () => {
+            currentSkin = s;
+            saveData.skin = s;
+            SaveSystem.save(saveData);
+            renderSkins();
+        };
+        grid.appendChild(div);
+    });
+}
+
+// Кнопки меню
+document.getElementById('play-btn').onclick = () => {
+    showScreen(null);
+    document.getElementById('hud').classList.remove('hidden');
+    document.getElementById('hud-level').classList.remove('hidden');
+    document.getElementById('boss-hud').classList.add('hidden');
+    initGame(1);
+};
+
+document.getElementById('levels-btn').onclick = () => {
+    renderLevelSelect();
+    showScreen('level-select-screen');
+};
+
+document.getElementById('collection-btn').onclick = () => {
+    renderCollection();
+    showScreen('collection-screen');
+};
+
+document.getElementById('level-back-btn').onclick = () => {
+    updateMenuStats();
+    showScreen('menu-screen');
+};
+
+document.getElementById('collection-back-btn').onclick = () => {
+    updateMenuStats();
+    showScreen('menu-screen');
+};
+
+document.getElementById('continue-btn').onclick = () => {
+    showScreen(null);
+    document.getElementById('hud').classList.remove('hidden');
+    document.getElementById('hud-level').classList.remove('hidden');
+    isPaused = false;
+};
+
+document.getElementById('restart-btn').onclick = () => {
+    showScreen(null);
+    document.getElementById('hud').classList.remove('hidden');
+    document.getElementById('hud-level').classList.remove('hidden');
+    document.getElementById('boss-hud').classList.add('hidden');
+    initGame(startLevel);
+};
+
+document.getElementById('menu-btn').onclick = () => {
+    updateMenuStats();
+    showScreen('menu-screen');
+    document.getElementById('hud').classList.add('hidden');
+    document.getElementById('hud-level').classList.add('hidden');
+    document.getElementById('boss-hud').classList.add('hidden');
+};
+
+document.getElementById('victory-menu-btn').onclick = () => {
+    updateMenuStats();
+    showScreen('menu-screen');
+    document.getElementById('hud').classList.add('hidden');
+    document.getElementById('hud-level').classList.add('hidden');
+    document.getElementById('boss-hud').classList.add('hidden');
+};
+
+document.getElementById('skins-btn').onclick = () => {
+    document.getElementById('shop-coins').innerText = saveData.coins;
+    renderSkins();
+    showScreen('skins-screen');
+};
+
+document.getElementById('back-btn').onclick = () => {
+    updateMenuStats();
+    showScreen('menu-screen');
+};
+
+// Polyfill for roundRect
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+        if (w < 2 * r) r = w / 2;
+        if (h < 2 * r) r = h / 2;
+        this.beginPath();
+        this.moveTo(x + r, y);
+        this.arcTo(x + w, y, x + w, y + h, r);
+        this.arcTo(x + w, y + h, x, y + h, r);
+        this.arcTo(x, y + h, x, y, r);
+        this.arcTo(x, y, x + w, y, r);
+        this.closePath();
+        return this;
+    };
+}
+
+// Старт
+updateMenuStats();
+showScreen('menu-screen');
+initStars();
+loop();
+</script>
+</body>
+</html>
